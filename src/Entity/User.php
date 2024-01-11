@@ -2,10 +2,16 @@
 
 namespace App\Entity;
 
-use App\Repository\UserRepository;
+use App\Entity\Customer;
 use Doctrine\ORM\Mapping as ORM;
-use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
+use App\Repository\UserRepository;
+use Doctrine\Common\Collections\Collection;
+use Doctrine\Common\Collections\ArrayCollection;
+use Symfony\Component\Serializer\Annotation\Groups;
+use Symfony\Component\Serializer\Annotation\MaxDepth;
 use Symfony\Component\Security\Core\User\UserInterface;
+use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
+
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 class User implements UserInterface, PasswordAuthenticatedUserInterface
@@ -36,6 +42,10 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(type: 'datetime_immutable', nullable: false, options: ["default" => "CURRENT_TIMESTAMP"])]
     private \DateTimeImmutable $updatedAt;
 
+    #[ORM\OneToMany(mappedBy: 'user', targetEntity: Customer::class)]
+    #[Groups(['getUsers', 'getCustomers'])]
+    private Collection $customers;
+
     /**
      * Construct
      */
@@ -43,6 +53,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         $this->createdAt = new \DateTimeImmutable();
         $this->updatedAt = new \DateTimeImmutable();
+        $this->customers = new ArrayCollection();
 
         //end __construct()
     }
@@ -181,5 +192,35 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         // If you store any temporary, sensitive data on the user, clear it here
         // $this->plainPassword = null;
+    }
+
+    /**
+     * @return Collection<int, Customer>
+     */
+    public function getCustomers(): Collection
+    {
+        return $this->customers;
+    }
+
+    public function addCustomer(Customer $customers): static
+    {
+        if (!$this->customers->contains($customers)) {
+            $this->customers->add($customers);
+            $customers->setUser($this);
+        }
+
+        return $this;
+    }
+
+    public function removeCustomer(Customer $customers): static
+    {
+        if ($this->customers->removeElement($customers)) {
+            // set the owning side to null (unless already changed)
+            if ($customers->getUser() === $this) {
+                $customers->setUser(null);
+            }
+        }
+
+        return $this;
     }
 }
