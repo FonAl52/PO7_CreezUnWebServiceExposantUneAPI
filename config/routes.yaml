@@ -6,8 +6,3 @@ controllers:
 
 api_login_check:
     path: /api/login_check
-
-api_customers:
-    path: '/api/customers'
-    controller: 'App\Controller\CustomerController::index'
-    methods: ['GET', 'POST']
