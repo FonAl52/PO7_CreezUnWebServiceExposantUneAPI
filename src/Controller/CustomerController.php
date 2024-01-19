@@ -125,4 +125,77 @@ class CustomerController extends AbstractController
 
         return new JsonResponse($jsonCustomer, Response::HTTP_OK, [], true);
     }
+
+    /**
+     * Update a specific customer
+     *
+     * @param Customer $customer
+     * @param Request $request
+     * @param EntityManagerInterface $entityManager
+     * @param SerializerInterface $serializer
+     * @param ValidatorInterface $validator
+     * @return JsonResponse
+     */
+    #[Route('api/customers/{id}', name: 'customer_update', methods: ['PUT'])]
+    public function updateCustomer(
+        Customer $customer,
+        Request $request,
+        EntityManagerInterface $entityManager,
+        SerializerInterface $serializer,
+        ValidatorInterface $validator
+    ): JsonResponse {
+        // Vérifier si l'utilisateur connecté est le propriétaire du client
+        $user = $this->getUser();
+        if ($user !== $customer->getUser()) {
+            return new JsonResponse(['code' => '401 Unauthorized' ,'message' => 'Ce client ne vous appartient pas'], JsonResponse::HTTP_UNAUTHORIZED);
+        }
+
+        // Désérialiser les données de la requête en une instance de Customer
+        $updatedCustomer = $serializer->deserialize($request->getContent(), Customer::class, 'json');
+
+        // Valider les données de l'entité Customer
+        $errors = $validator->validate($updatedCustomer);
+        if (count($errors) > 0) {
+            $errorData = [];
+
+            foreach ($errors as $violation) {
+                $errorData[] = [
+                    'code' => $violation->getCode(),
+                    'message' => $violation->getMessage(),
+                ];
+            }
+
+            return new JsonResponse($errorData, JsonResponse::HTTP_BAD_REQUEST);
+        }
+
+        // Mettre à jour les informations du client si elles sont fournies dans la requête
+        $firstName = $updatedCustomer->getFirstName();
+        if ($firstName !== null) {
+            $customer->setFirstName($firstName);
+        }
+
+        $lastName = $updatedCustomer->getLastName();
+        if ($lastName !== null) {
+            $customer->setLastName($lastName);
+        }
+
+        $email = $updatedCustomer->getEmail();
+        if ($email !== null) {
+            $customer->setEmail($email);
+        }
+
+        // Persister et sauvegarder
+        $entityManager->flush();
+
+        // Transformer la requête mise à jour en tableau
+        $updatedCustomerData = $request->toArray();
+
+        // Ajouter l'ID de l'utilisateur à la réponse
+        $updatedCustomerData['userId'] = $customer->getUser()->getId();
+
+        // Normaliser l'entité Customer mise à jour en JSON
+        $jsonUpdatedCustomer = $serializer->serialize($updatedCustomerData, 'json');
+
+        return new JsonResponse($jsonUpdatedCustomer, Response::HTTP_OK, [], true);
+    }
 }
