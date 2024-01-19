@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\Customer;
+use App\Repository\CustomerRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\Request;
@@ -74,5 +75,30 @@ class CustomerController extends AbstractController
             [],
             true
         );
+    }
+
+    #[Route('/api/customers', name: 'customer', methods: ['GET'])]
+    public function getAllCustomers(
+        Security $security,
+        Request $request,
+        SerializerInterface $serializer,
+        CustomerRepository $customerRepository
+    ): JsonResponse {
+        // Récupérer l'utilisateur connecté
+        $user = $security->getUser();
+        
+        // Vérifier si l'utilisateur est connecté
+        if (!$user) {
+            return new JsonResponse(['error' => 'User not authenticated'], JsonResponse::HTTP_UNAUTHORIZED);
+        }
+
+        $page = $request->get('page', 1);
+        $limit = $request->get('limit', 3);
+
+        // Récupérer uniquement les customers liés à l'utilisateur connecté
+        $customerList = $customerRepository->findCustomersByUserIdWithPagination($user->getId(), $page, $limit);
+        $jsonCustomerList = $serializer->serialize($customerList, 'json', ['groups' => 'getCustomers']);
+
+        return new JsonResponse($jsonCustomerList, Response::HTTP_OK, [], true);
     }
 }
