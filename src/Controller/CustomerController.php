@@ -48,11 +48,20 @@ class CustomerController extends AbstractController
         
         // Valider les données de l'entité Customer
         $errors = $validator->validate($customer);
-
+        
         if (count($errors) > 0) {
-            return new JsonResponse(['error' => (string) $errors], JsonResponse::HTTP_BAD_REQUEST);
-        }
+            $errorData = [];
 
+            foreach ($errors as $violation) {
+                $errorData[] = [
+                    'code' => $violation->getCode(),
+                    'message' => $violation->getMessage(),
+                ];
+            }
+
+            return new JsonResponse($errorData, JsonResponse::HTTP_BAD_REQUEST);
+        }
+        
         // Associer le client à l'utilisateur connecté
         $customer->setUser($user);
         
@@ -100,5 +109,20 @@ class CustomerController extends AbstractController
         $jsonCustomerList = $serializer->serialize($customerList, 'json', ['groups' => 'getCustomers']);
 
         return new JsonResponse($jsonCustomerList, Response::HTTP_OK, [], true);
+    }
+
+    #[Route('api/customers/{id}', name: 'customer_detail', methods: ['GET'])]
+    public function getCustomerDetail(Customer $customer, SerializerInterface $serializer): JsonResponse
+    {
+        // Vérifier si l'utilisateur connecté est le propriétaire du client
+        $user = $this->getUser();
+        if ($user !== $customer->getUser()) {
+            return new JsonResponse(['code' => '401 Unauthorized' ,'message' => 'Ce client ne vous appartient pas'], JsonResponse::HTTP_UNAUTHORIZED);
+        }
+
+        // Normaliser l'entité Customer en JSON
+        $jsonCustomer = $serializer->serialize($customer, 'json', ['groups' => 'getCustomers']);
+
+        return new JsonResponse($jsonCustomer, Response::HTTP_OK, [], true);
     }
 }
