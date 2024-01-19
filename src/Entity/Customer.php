@@ -7,9 +7,11 @@ use Doctrine\ORM\Mapping as ORM;
 use App\Repository\CustomerRepository;
 use Symfony\Component\Serializer\Annotation\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 
 
 #[ORM\Entity(repositoryClass: CustomerRepository::class)]
+#[UniqueEntity('email')]
 class Customer
 {
     #[ORM\Id]
@@ -32,7 +34,6 @@ class Customer
 
     #[ORM\Column(length: 180, unique: true)]
     #[Assert\Email(message: "The email {{ value }} is not a valid email.")]
-    #[Assert\Unique(message: "Cet email existe déjà")]
     #[Groups(['getUsers', 'getCustomers'])]
     private ?string $email = null;
 
@@ -44,7 +45,6 @@ class Customer
 
     #[ORM\ManyToOne(inversedBy: 'customers')]
     #[ORM\JoinColumn(name: "user_id", referencedColumnName: "id", nullable: false)]
-    #[Groups(['getCustomers'])]
     private ?User $user = null;
 
     /**
