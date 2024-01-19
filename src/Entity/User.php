@@ -19,20 +19,24 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['getUsers', 'getCustomers'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 180, unique: true)]
     #[Assert\NotBlank(message: "Le username de client est obligatoire.")]
     #[Assert\Length(min: 1, max: 255, minMessage: "Le username doit faire au moins {{ limit }} caractères")]
     #[Assert\Unique(message: "Ce username existe déjà")]
+    #[Groups(['getUsers', 'getCustomers'])]
     private ?string $username = null;
 
     #[ORM\Column(length: 180, unique: true)]
     #[Assert\Email(message: "The email {{ value }} is not a valid email.")]
     #[Assert\Unique(message: "Cet email existe déjà")]
+    #[Groups(['getUsers', 'getCustomers'])]
     private ?string $email = null;
 
     #[ORM\Column]
+    #[Groups(['getUsers', 'getCustomers'])]
     private array $roles = [];
 
     /**
@@ -48,7 +52,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private \DateTimeImmutable $updatedAt;
 
     #[ORM\OneToMany(mappedBy: 'user', targetEntity: Customer::class)]
-    #[Groups(['getUsers', 'getCustomers'])]
     private Collection $customers;
 
     /**
