@@ -86,6 +86,15 @@ class CustomerController extends AbstractController
         );
     }
 
+    /**
+     * Get all customers link to a user
+     *
+     * @param Security $security
+     * @param Request $request
+     * @param SerializerInterface $serializer
+     * @param CustomerRepository $customerRepository
+     * @return JsonResponse
+     */
     #[Route('/api/customers', name: 'customer', methods: ['GET'])]
     public function getAllCustomers(
         Security $security,
@@ -111,6 +120,14 @@ class CustomerController extends AbstractController
         return new JsonResponse($jsonCustomerList, Response::HTTP_OK, [], true);
     }
 
+
+    /**
+     * Get a Customer Details
+     * 
+     * @param Customer $customer
+     * @param SerializerInterface $serializer
+     * @return JsonResponse
+     */
     #[Route('api/customers/{id}', name: 'customer_detail', methods: ['GET'])]
     public function getCustomerDetail(Customer $customer, SerializerInterface $serializer): JsonResponse
     {
@@ -197,5 +214,28 @@ class CustomerController extends AbstractController
         $jsonUpdatedCustomer = $serializer->serialize($updatedCustomerData, 'json');
 
         return new JsonResponse($jsonUpdatedCustomer, Response::HTTP_OK, [], true);
+    }
+
+    /**
+     * Delete a Customer
+     * 
+     * @param Customer $customer
+     * @param EntityManagerInterface $entityManager
+     * @return JsonResponse
+     */
+    #[Route('/api/customers/{id}', name: 'customer_delete', methods: ['DELETE'])]
+    public function deleteCustomer(Customer $customer, EntityManagerInterface $entityManager): JsonResponse
+    {
+        // Vérifier si l'utilisateur connecté est le propriétaire du client
+        $user = $this->getUser();
+        if ($user !== $customer->getUser()) {
+            return new JsonResponse(['code' => '401 Unauthorized' ,'message' => 'Ce client ne vous appartient pas'], JsonResponse::HTTP_UNAUTHORIZED);
+        }
+
+        // Delete the customer
+        $entityManager->remove($customer);
+        $entityManager->flush();
+
+        return new JsonResponse(['message' => 'Le client à bien été supprimé'], JsonResponse::HTTP_OK);
     }
 }
