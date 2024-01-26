@@ -77,9 +77,10 @@ class CustomerController extends AbstractController
 
         // Ajouter l'ID de l'utilisateur à la réponse
         $customerSerialize['userId'] = $customer->getUser()->getId();
-        
+
+        $context = SerializationContext::create()->setGroups(['getCustomers']);
         // Normaliser l'entité Customer en JSON
-        $jsonCustomer = $serializer->serialize($customerSerialize, 'json');
+        $jsonCustomer = $serializer->serialize($customerSerialize, 'json', $context);
         
         return new JsonResponse($jsonCustomer,
             Response::HTTP_CREATED,
@@ -191,22 +192,6 @@ class CustomerController extends AbstractController
             return new JsonResponse($errorData, JsonResponse::HTTP_BAD_REQUEST);
         }
 
-        // Mettre à jour les informations du client si elles sont fournies dans la requête
-        $firstName = $updatedCustomer->getFirstName();
-        if ($firstName !== null) {
-            $customer->setFirstName($firstName);
-        }
-
-        $lastName = $updatedCustomer->getLastName();
-        if ($lastName !== null) {
-            $customer->setLastName($lastName);
-        }
-
-        $email = $updatedCustomer->getEmail();
-        if ($email !== null) {
-            $customer->setEmail($email);
-        }
-
         // Persister et sauvegarder
         $entityManager->flush();
 
@@ -242,6 +227,6 @@ class CustomerController extends AbstractController
         $entityManager->remove($customer);
         $entityManager->flush();
 
-        return new JsonResponse(['message' => 'Le client à bien été supprimé'], JsonResponse::HTTP_OK);
+        return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
 }

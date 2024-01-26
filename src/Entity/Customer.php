@@ -50,16 +50,19 @@ class Customer
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
+    #[Assert\NotBlank(message: "Le nom de client est obligatoire.")]
     #[Assert\Length(min: 1, max: 255, minMessage: "Le nom doit faire au moins {{ limit }} caractères")]
     #[Groups(['getUsers', 'getCustomers'])]
     private ?string $firstName = null;
 
     #[ORM\Column(length: 255)]
+    #[Assert\NotBlank(message: "Le prénom de client est obligatoire.")]
     #[Assert\Length(min: 1, max: 255, minMessage: "Le prénom doit faire au moins {{ limit }} caractères")]
     #[Groups(['getUsers', 'getCustomers'])]
     private ?string $lastName = null;
 
     #[ORM\Column(length: 180, unique: true)]
+    #[Assert\NotBlank(message: "L'email de client est obligatoire.")]
     #[Assert\Email(message: "The email {{ value }} is not a valid email.")]
     #[Groups(['getUsers', 'getCustomers'])]
     private ?string $email = null;
