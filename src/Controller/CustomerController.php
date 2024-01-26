@@ -4,13 +4,14 @@ namespace App\Controller;
 
 use App\Entity\Customer;
 use App\Repository\CustomerRepository;
+use JMS\Serializer\SerializerInterface;
 use Doctrine\ORM\EntityManagerInterface;
+use JMS\Serializer\SerializationContext;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
@@ -46,6 +47,8 @@ class CustomerController extends AbstractController
         // Désérialiser les données de la requête en une instance de Customer
         $customer = $serializer->deserialize($request->getContent(), Customer::class, 'json');
         
+        $customer->__construct();
+
         // Valider les données de l'entité Customer
         $errors = $validator->validate($customer);
         
@@ -74,10 +77,9 @@ class CustomerController extends AbstractController
 
         // Ajouter l'ID de l'utilisateur à la réponse
         $customerSerialize['userId'] = $customer->getUser()->getId();
-
+        
         // Normaliser l'entité Customer en JSON
         $jsonCustomer = $serializer->serialize($customerSerialize, 'json');
-        
         
         return new JsonResponse($jsonCustomer,
             Response::HTTP_CREATED,
@@ -115,7 +117,8 @@ class CustomerController extends AbstractController
 
         // Récupérer uniquement les customers liés à l'utilisateur connecté
         $customerList = $customerRepository->findCustomersByUserIdWithPagination($user->getId(), $page, $limit);
-        $jsonCustomerList = $serializer->serialize($customerList, 'json', ['groups' => 'getCustomers']);
+        $context = SerializationContext::create()->setGroups(['getCustomers']);
+        $jsonCustomerList = $serializer->serialize($customerList, 'json', $context);
 
         return new JsonResponse($jsonCustomerList, Response::HTTP_OK, [], true);
     }
@@ -136,9 +139,9 @@ class CustomerController extends AbstractController
         if ($user !== $customer->getUser()) {
             return new JsonResponse(['code' => '401 Unauthorized' ,'message' => 'Ce client ne vous appartient pas'], JsonResponse::HTTP_UNAUTHORIZED);
         }
-
+        $context = SerializationContext::create()->setGroups(['getCustomers']);
         // Normaliser l'entité Customer en JSON
-        $jsonCustomer = $serializer->serialize($customer, 'json', ['groups' => 'getCustomers']);
+        $jsonCustomer = $serializer->serialize($customer, 'json', $context);
 
         return new JsonResponse($jsonCustomer, Response::HTTP_OK, [], true);
     }
@@ -166,12 +169,15 @@ class CustomerController extends AbstractController
         if ($user !== $customer->getUser()) {
             return new JsonResponse(['code' => '401 Unauthorized' ,'message' => 'Ce client ne vous appartient pas'], JsonResponse::HTTP_UNAUTHORIZED);
         }
-
+        
         // Désérialiser les données de la requête en une instance de Customer
         $updatedCustomer = $serializer->deserialize($request->getContent(), Customer::class, 'json');
+        
+        $customer->setLastName($updatedCustomer->getLastName());
+        $customer->setFirstName($updatedCustomer->getFirstName());
 
         // Valider les données de l'entité Customer
-        $errors = $validator->validate($updatedCustomer);
+        $errors = $validator->validate($customer);
         if (count($errors) > 0) {
             $errorData = [];
 
