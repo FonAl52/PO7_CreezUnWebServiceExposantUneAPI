@@ -5,6 +5,7 @@ namespace App\DataFixtures;
 use Faker\Factory;
 use App\Entity\User;
 use Faker\Generator;
+use App\Entity\Product;
 use App\Entity\Customer;
 use Doctrine\Persistence\ObjectManager;
 use Doctrine\Bundle\FixturesBundle\Fixture;
@@ -69,6 +70,16 @@ class AppFixtures extends Fixture
             $customer->setUser($randomUser);
 
             $manager->persist($customer);
+        }
+
+        // Création de produits réalistes avec Faker
+        for ($i = 0; $i < 10; $i++) {
+            $product = new Product();
+            $product->setName($this->faker->word);
+            $product->setDescription($this->faker->sentence);
+            $product->setPrice($this->faker->randomFloat(2, 10, 100)); // Prix aléatoire entre 10 et 100 avec 2 décimales
+
+            $manager->persist($product);
         }
 
         $manager->flush();
