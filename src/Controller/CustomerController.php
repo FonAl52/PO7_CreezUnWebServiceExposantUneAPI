@@ -46,8 +46,10 @@ class CustomerController extends AbstractController
 
         // Désérialiser les données de la requête en une instance de Customer
         $customer = $serializer->deserialize($request->getContent(), Customer::class, 'json');
-        
-        $customer->__construct();
+
+        // Ajouter la date actuelle à la propriété createdAt et updatedAt
+        $customer->setCreatedAt(new \DateTimeImmutable());
+        $customer->setUpdatedAt(new \DateTimeImmutable());
 
         // Valider les données de l'entité Customer
         $errors = $validator->validate($customer);
@@ -170,15 +172,12 @@ class CustomerController extends AbstractController
         if ($user !== $customer->getUser()) {
             return new JsonResponse(['code' => '401 Unauthorized' ,'message' => 'Ce client ne vous appartient pas'], JsonResponse::HTTP_UNAUTHORIZED);
         }
-        
+
         // Désérialiser les données de la requête en une instance de Customer
         $updatedCustomer = $serializer->deserialize($request->getContent(), Customer::class, 'json');
         
-        $customer->setLastName($updatedCustomer->getLastName());
-        $customer->setFirstName($updatedCustomer->getFirstName());
-
         // Valider les données de l'entité Customer
-        $errors = $validator->validate($customer);
+        $errors = $validator->validate($updatedCustomer);
         if (count($errors) > 0) {
             $errorData = [];
 
@@ -191,6 +190,10 @@ class CustomerController extends AbstractController
 
             return new JsonResponse($errorData, JsonResponse::HTTP_BAD_REQUEST);
         }
+
+        // Mettre à jour les propriétés de l'entité Customer
+        $customer->setFirstName($updatedCustomer->getFirstName());
+        $customer->setLastName($updatedCustomer->getLastName());
 
         // Persister et sauvegarder
         $entityManager->flush();
