@@ -7,11 +7,13 @@ use App\Repository\CustomerRepository;
 use JMS\Serializer\SerializerInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use JMS\Serializer\SerializationContext;
+use Symfony\Contracts\Cache\ItemInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Contracts\Cache\TagAwareCacheInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
@@ -105,7 +107,8 @@ class CustomerController extends AbstractController
         Security $security,
         Request $request,
         SerializerInterface $serializer,
-        CustomerRepository $customerRepository
+        CustomerRepository $customerRepository,
+        TagAwareCacheInterface $cachePool
     ): JsonResponse {
         // Récupérer l'utilisateur connecté
         $user = $security->getUser();
@@ -118,8 +121,15 @@ class CustomerController extends AbstractController
         $page = $request->get('page', 1);
         $limit = $request->get('limit', 3);
 
-        // Récupérer uniquement les customers liés à l'utilisateur connecté
-        $customerList = $customerRepository->findCustomersByUserIdWithPagination($user->getId(), $page, $limit);
+        $idCache = "getAllCustomers-" . $page . "-" . $limit;
+        $customerList = $cachePool->get($idCache, function (ItemInterface $item) use ($customerRepository, $page, $limit, $user) {
+            echo ("Pas encore en cache");
+            $item->tag("customersCache");
+
+            // Récupérer uniquement les customers liés à l'utilisateur connecté
+            return $customerRepository->findCustomersByUserIdWithPagination($user->getId(), $page, $limit);
+        });
+
         $context = SerializationContext::create()->setGroups(['getCustomers']);
         $jsonCustomerList = $serializer->serialize($customerList, 'json', $context);
 
@@ -165,7 +175,8 @@ class CustomerController extends AbstractController
         Request $request,
         EntityManagerInterface $entityManager,
         SerializerInterface $serializer,
-        ValidatorInterface $validator
+        ValidatorInterface $validator,
+        TagAwareCacheInterface $cachePool
     ): JsonResponse {
         // Vérifier si l'utilisateur connecté est le propriétaire du client
         $user = $this->getUser();
@@ -190,7 +201,7 @@ class CustomerController extends AbstractController
 
             return new JsonResponse($errorData, JsonResponse::HTTP_BAD_REQUEST);
         }
-
+        
         // Mettre à jour les propriétés de l'entité Customer
         $customer->setFirstName($updatedCustomer->getFirstName());
         $customer->setLastName($updatedCustomer->getLastName());
@@ -198,6 +209,9 @@ class CustomerController extends AbstractController
         // Persister et sauvegarder
         $entityManager->flush();
 
+        // Clear cache data
+        $cachePool->invalidateTags(["customersCache"]);
+        
         // Transformer la requête mise à jour en tableau
         $updatedCustomerData = $request->toArray();
 
@@ -218,14 +232,18 @@ class CustomerController extends AbstractController
      * @return JsonResponse
      */
     #[Route('/api/customers/{id}', name: 'customer_delete', methods: ['DELETE'])]
-    public function deleteCustomer(Customer $customer, EntityManagerInterface $entityManager): JsonResponse
-    {
+    public function deleteCustomer(
+        Customer $customer,
+        EntityManagerInterface $entityManager,
+        TagAwareCacheInterface $cachePool
+        ): JsonResponse {
         // Vérifier si l'utilisateur connecté est le propriétaire du client
         $user = $this->getUser();
         if ($user !== $customer->getUser()) {
             return new JsonResponse(['code' => '401 Unauthorized' ,'message' => 'Ce client ne vous appartient pas'], JsonResponse::HTTP_UNAUTHORIZED);
         }
-
+        // Clear cache data
+        $cachePool->invalidateTags(["customersCache"]);
         // Delete the customer
         $entityManager->remove($customer);
         $entityManager->flush();
