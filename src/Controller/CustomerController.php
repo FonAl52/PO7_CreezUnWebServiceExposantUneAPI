@@ -60,9 +60,31 @@ class CustomerController extends AbstractController
             $errorData = [];
 
             foreach ($errors as $violation) {
+                $errorCode = $violation->getCode();
+                $errorMessage = $violation->getMessage();
+            
+                switch ($errorCode) {
+                    case '23bd9dbf-6b9b-41cd-a99e-4844bcf3077f':
+                        $errorCode = '400';
+                        $errorMessage = 'L\'email est déjà utilisée.';
+                        break;
+                    case  'bd79c0ab-ddba-46cc-a703-a7a4b08de310':
+                        $errorCode = '400';
+                        $errorMessage = 'Cet email n\'est pas valide.';
+                        break;
+                    case 'c1051bb4-d103-4f74-8988-acbcafc7fdc3':
+                        $errorCode = '400';
+                        $errorMessage = 'Le nom et prénom de client sont obligatoires.';
+                        break;
+                    default:
+                        // Message par défaut pour les autres types d'erreur
+                        $errorMessage = 'Une erreur est survenue lors de la validation.';
+                        break;
+                }
+            
                 $errorData[] = [
-                    'code' => $violation->getCode(),
-                    'message' => $violation->getMessage(),
+                    'code' => $errorCode,
+                    'message' => $errorMessage,
                 ];
             }
 
@@ -167,6 +189,7 @@ class CustomerController extends AbstractController
      * @param EntityManagerInterface $entityManager
      * @param SerializerInterface $serializer
      * @param ValidatorInterface $validator
+     * @param TagAwareCacheInterface $cachePool
      * @return JsonResponse
      */
     #[Route('api/customers/{id}', name: 'customer_update', methods: ['PUT'])]
@@ -193,12 +216,34 @@ class CustomerController extends AbstractController
             $errorData = [];
 
             foreach ($errors as $violation) {
+                $errorCode = $violation->getCode();
+                $errorMessage = $violation->getMessage();
+            
+                switch ($errorCode) {
+                    case '23bd9dbf-6b9b-41cd-a99e-4844bcf3077f':
+                        $errorCode = '400';
+                        $errorMessage = 'L\'email est déjà utilisée.';
+                        break;
+                    case  'bd79c0ab-ddba-46cc-a703-a7a4b08de310':
+                        $errorCode = '400';
+                        $errorMessage = 'Cet email n\'est pas valide.';
+                        break;
+                    case 'c1051bb4-d103-4f74-8988-acbcafc7fdc3':
+                        $errorCode = '400';
+                        $errorMessage = 'Le nom et prénom de client sont obligatoires.';
+                        break;
+                    default:
+                        // Message par défaut pour les autres types d'erreur
+                        $errorMessage = 'Une erreur est survenue lors de la validation.';
+                        break;
+                }
+                
                 $errorData[] = [
-                    'code' => $violation->getCode(),
-                    'message' => $violation->getMessage(),
+                    'code' => $errorCode,
+                    'message' => $errorMessage,
                 ];
             }
-
+            
             return new JsonResponse($errorData, JsonResponse::HTTP_BAD_REQUEST);
         }
         
