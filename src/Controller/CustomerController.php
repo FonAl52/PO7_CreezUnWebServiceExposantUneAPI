@@ -8,7 +8,7 @@ use JMS\Serializer\SerializerInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use JMS\Serializer\SerializationContext;
 use Symfony\Contracts\Cache\ItemInterface;
-use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Bundle\SecurityBundle\Security  as SymfonySecurity;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
@@ -16,6 +16,9 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Contracts\Cache\TagAwareCacheInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Nelmio\ApiDocBundle\Annotation\Model;
+use Nelmio\ApiDocBundle\Annotation\Security;
+use OpenApi\Annotations as OA;
 
 
 class CustomerController extends AbstractController
@@ -26,7 +29,7 @@ class CustomerController extends AbstractController
      * @param Request $request
      * @param SerializerInterface $serializer
      * @param EntityManagerInterface $entityManager
-     * @param Security $security
+     * @param SymfonySecurity $security
      * @param ValidatorInterface $validator
      * @return JsonResponse
      */
@@ -35,25 +38,23 @@ class CustomerController extends AbstractController
         Request $request,
         SerializerInterface $serializer,
         EntityManagerInterface $entityManager,
-        Security $security,
+        SymfonySecurity $security,
         ValidatorInterface $validator
     ): JsonResponse {
-        // Récupérer l'utilisateur connecté
+        // Retrieve the logged in user
         $user = $security->getUser();
 
-        // Vérifier si l'utilisateur est connecté
+        // Check if the user is logged in
         if (!$user) {
             return new JsonResponse(['error' => 'User not authenticated'], JsonResponse::HTTP_UNAUTHORIZED);
         }
 
-        // Désérialiser les données de la requête en une instance de Customer
         $customer = $serializer->deserialize($request->getContent(), Customer::class, 'json');
 
-        // Ajouter la date actuelle à la propriété createdAt et updatedAt
+        // Add the current date to the createdAt and updatedAt property
         $customer->setCreatedAt(new \DateTimeImmutable());
         $customer->setUpdatedAt(new \DateTimeImmutable());
 
-        // Valider les données de l'entité Customer
         $errors = $validator->validate($customer);
         
         if (count($errors) > 0) {
@@ -72,13 +73,9 @@ class CustomerController extends AbstractController
                         $errorCode = '400';
                         $errorMessage = 'Cet email n\'est pas valide.';
                         break;
-                    case 'c1051bb4-d103-4f74-8988-acbcafc7fdc3':
-                        $errorCode = '400';
-                        $errorMessage = 'Le nom et prénom de client sont obligatoires.';
-                        break;
                     default:
-                        // Message par défaut pour les autres types d'erreur
-                        $errorMessage = 'Une erreur est survenue lors de la validation.';
+                        $errorCode = '400';
+                        $errorMessage = 'Tous les champs sont obligatoires';
                         break;
                 }
             
@@ -91,21 +88,18 @@ class CustomerController extends AbstractController
             return new JsonResponse($errorData, JsonResponse::HTTP_BAD_REQUEST);
         }
         
-        // Associer le client à l'utilisateur connecté
         $customer->setUser($user);
         
-        // Persister et sauvegarder
         $entityManager->persist($customer);
         $entityManager->flush();
         
-        // Transformer la requéte en tableau
         $customerSerialize = $request->toArray();
 
-        // Ajouter l'ID de l'utilisateur à la réponse
+        // Add user ID to response
         $customerSerialize['userId'] = $customer->getUser()->getId();
 
         $context = SerializationContext::create()->setGroups(['getCustomers']);
-        // Normaliser l'entité Customer en JSON
+
         $jsonCustomer = $serializer->serialize($customerSerialize, 'json', $context);
         
         return new JsonResponse($jsonCustomer,
@@ -118,7 +112,33 @@ class CustomerController extends AbstractController
     /**
      * Get all customers link to a user
      *
-     * @param Security $security
+     * 
+     * @OA\Response(
+     *     response=200,
+     *     description="Return the list of customers",
+     *     @OA\JsonContent(
+     *        type="array",
+     *        @OA\Items(ref=@Model(type=Customer::class, groups={"getCustomers"}))
+     *     )
+     * )
+     * @OA\Parameter(
+     *     name="page",
+     *     in="query",
+     *     description="The page you want to retrieve",
+     *     @OA\Schema(type="int")
+     * )
+     *
+     * @OA\Parameter(
+     *     name="limit",
+     *     in="query",
+     *     description="The number of elements we want to recover",
+     *     @OA\Schema(type="int")
+     * )
+     * 
+     * @OA\Tag(name="Customer")
+     * 
+     * 
+     * @param SymfonySecurity $security
      * @param Request $request
      * @param SerializerInterface $serializer
      * @param CustomerRepository $customerRepository
@@ -126,16 +146,16 @@ class CustomerController extends AbstractController
      */
     #[Route('/api/customers', name: 'customer', methods: ['GET'])]
     public function getAllCustomers(
-        Security $security,
+        SymfonySecurity $security,
         Request $request,
         SerializerInterface $serializer,
         CustomerRepository $customerRepository,
         TagAwareCacheInterface $cachePool
     ): JsonResponse {
-        // Récupérer l'utilisateur connecté
+        // Retrieve the logged in user
         $user = $security->getUser();
         
-        // Vérifier si l'utilisateur est connecté
+        // Check if the user is logged in
         if (!$user) {
             return new JsonResponse(['error' => 'User not authenticated'], JsonResponse::HTTP_UNAUTHORIZED);
         }
@@ -148,7 +168,6 @@ class CustomerController extends AbstractController
             echo ("Pas encore en cache");
             $item->tag("customersCache");
 
-            // Récupérer uniquement les customers liés à l'utilisateur connecté
             return $customerRepository->findCustomersByUserIdWithPagination($user->getId(), $page, $limit);
         });
 
@@ -169,13 +188,13 @@ class CustomerController extends AbstractController
     #[Route('api/customers/{id}', name: 'customer_detail', methods: ['GET'])]
     public function getCustomerDetail(Customer $customer, SerializerInterface $serializer): JsonResponse
     {
-        // Vérifier si l'utilisateur connecté est le propriétaire du client
+        // Check if the logged in user is the client owner
         $user = $this->getUser();
         if ($user !== $customer->getUser()) {
             return new JsonResponse(['code' => '401 Unauthorized' ,'message' => 'Ce client ne vous appartient pas'], JsonResponse::HTTP_UNAUTHORIZED);
         }
         $context = SerializationContext::create()->setGroups(['getCustomers']);
-        // Normaliser l'entité Customer en JSON
+
         $jsonCustomer = $serializer->serialize($customer, 'json', $context);
 
         return new JsonResponse($jsonCustomer, Response::HTTP_OK, [], true);
@@ -201,16 +220,14 @@ class CustomerController extends AbstractController
         ValidatorInterface $validator,
         TagAwareCacheInterface $cachePool
     ): JsonResponse {
-        // Vérifier si l'utilisateur connecté est le propriétaire du client
+        // Check if the logged in user is the client owner
         $user = $this->getUser();
         if ($user !== $customer->getUser()) {
             return new JsonResponse(['code' => '401 Unauthorized' ,'message' => 'Ce client ne vous appartient pas'], JsonResponse::HTTP_UNAUTHORIZED);
         }
 
-        // Désérialiser les données de la requête en une instance de Customer
         $updatedCustomer = $serializer->deserialize($request->getContent(), Customer::class, 'json');
         
-        // Valider les données de l'entité Customer
         $errors = $validator->validate($updatedCustomer);
         if (count($errors) > 0) {
             $errorData = [];
@@ -233,7 +250,6 @@ class CustomerController extends AbstractController
                         $errorMessage = 'Le nom et prénom de client sont obligatoires.';
                         break;
                     default:
-                        // Message par défaut pour les autres types d'erreur
                         $errorMessage = 'Une erreur est survenue lors de la validation.';
                         break;
                 }
@@ -247,23 +263,18 @@ class CustomerController extends AbstractController
             return new JsonResponse($errorData, JsonResponse::HTTP_BAD_REQUEST);
         }
         
-        // Mettre à jour les propriétés de l'entité Customer
         $customer->setFirstName($updatedCustomer->getFirstName());
         $customer->setLastName($updatedCustomer->getLastName());
 
-        // Persister et sauvegarder
         $entityManager->flush();
 
         // Clear cache data
         $cachePool->invalidateTags(["customersCache"]);
         
-        // Transformer la requête mise à jour en tableau
         $updatedCustomerData = $request->toArray();
 
-        // Ajouter l'ID de l'utilisateur à la réponse
         $updatedCustomerData['userId'] = $customer->getUser()->getId();
 
-        // Normaliser l'entité Customer mise à jour en JSON
         $jsonUpdatedCustomer = $serializer->serialize($updatedCustomerData, 'json');
 
         return new JsonResponse($jsonUpdatedCustomer, Response::HTTP_OK, [], true);
@@ -282,14 +293,14 @@ class CustomerController extends AbstractController
         EntityManagerInterface $entityManager,
         TagAwareCacheInterface $cachePool
         ): JsonResponse {
-        // Vérifier si l'utilisateur connecté est le propriétaire du client
+        // Check if the logged in user is the client owner
         $user = $this->getUser();
         if ($user !== $customer->getUser()) {
             return new JsonResponse(['code' => '401 Unauthorized' ,'message' => 'Ce client ne vous appartient pas'], JsonResponse::HTTP_UNAUTHORIZED);
         }
         // Clear cache data
         $cachePool->invalidateTags(["customersCache"]);
-        // Delete the customer
+        
         $entityManager->remove($customer);
         $entityManager->flush();
 
