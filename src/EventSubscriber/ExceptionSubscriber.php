@@ -16,7 +16,7 @@ class ExceptionSubscriber implements EventSubscriberInterface
         $exception = $event->getThrowable();
 
         if ($exception instanceof NotFoundHttpException) {
-            // Gérer spécifiquement l'erreur NotFoundHttpException (erreur 404)
+            // Specifically handle the NotFoundHttpException error (404 error)
             $data = [
                 'code' => 404,
                 'message' => 'Ressource non trouvée.'
@@ -32,7 +32,7 @@ class ExceptionSubscriber implements EventSubscriberInterface
             $event->setResponse(new JsonResponse($data));
         } else {
             $data = [
-                'code' => 500, // Le statut n'existe pas car ce n'est pas une exception HTTP, donc on met 500 par défaut.
+                'code' => 500, // The status does not exist because it is not an HTTP exception, so we set 500 by default.
                 'message' => $exception->getMessage()
             ];
 

@@ -18,7 +18,18 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
 class ProductController extends AbstractController
 {
-    #[Route('/api/products', name: 'product')]
+    /**
+     * Get a list of all products
+     *
+     * 
+     * @param Request $request
+     * @param SerializerInterface $serializer
+     * @param PaginatorInterface $paginator
+     * @param ProductRepository $productRepository
+     * @param TagAwareCacheInterface $cachePool
+     * @return JsonResponse
+     */
+    #[Route('/api/products', name: 'product', methods: ['GET'])]
     public function getAllProducts(
         Request $request,
         SerializerInterface $serializer,
@@ -29,18 +40,17 @@ class ProductController extends AbstractController
         $page = $request->get('page', 1);
         $limit = $request->get('limit', 3);
 
-        // Récupérer tous les produits
-
+        // Collect all products
         $idCache = "getAllProducts-" . $page . "-" . $limit;
         $allProducts = $cachePool->get($idCache, function (ItemInterface $item) use ($productRepository, $page, $limit) {
             echo ("Pas encore en cache");
             $item->tag("productsCache");
 
-            // Récupérer uniquement les customers liés à l'utilisateur connecté
+            // Retrieve only customers linked to the logged in user
             return $productRepository->findAll();;
         });
 
-        // Paginer les résultats avec KnpPaginator
+        // Paginate results with KnpPaginator
         $pagination = $paginator->paginate(
             $allProducts,
             $page,
@@ -53,11 +63,20 @@ class ProductController extends AbstractController
         return new JsonResponse($jsonProductList, Response::HTTP_OK, [], true);
     }
 
+    /**
+     * Get the detail of one product
+     * 
+     * 
+     * @param Product $product
+     * @param SerializerInterface $serializer
+     * @return JsonResponse
+     */
     #[Route('api/products/{id}', name: 'product_detail', methods: ['GET'])]
-    public function getProductDetail(Product $product, SerializerInterface $serializer): JsonResponse
-    {
+    public function getProductDetail(
+        Product $product,
+        SerializerInterface $serializer
+    ): JsonResponse {
         $context = SerializationContext::create()->setGroups(['getProducts']);
-        // Normaliser l'entité Product en JSON
         $jsonProduct = $serializer->serialize($product, 'json', $context);
 
         return new JsonResponse($jsonProduct, Response::HTTP_OK, [], true);

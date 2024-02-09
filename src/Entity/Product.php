@@ -7,6 +7,8 @@ use App\Repository\ProductRepository;
 use JMS\Serializer\Annotation\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
 use Hateoas\Configuration\Annotation as Hateoas;
+use Hateoas\Configuration\Annotation\Route;
+use Hateoas\Exclusion\Exclusion;
 
 
 /**
