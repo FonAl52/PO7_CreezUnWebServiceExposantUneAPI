@@ -38,6 +38,11 @@ use Hateoas\Configuration\Annotation as Hateoas;
  *      exclusion = @Hateoas\Exclusion(groups="getCustomers")
  * )
  *
+ * 
+ * /**
+ * @OA\Schema(@OA\Xml(name="User"))
+ * 
+ * 
  */
 #[ORM\Entity(repositoryClass: CustomerRepository::class)]
 #[UniqueEntity('email')]

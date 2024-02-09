@@ -3,24 +3,24 @@
 namespace App\Controller;
 
 use App\Entity\Customer;
+use OpenApi\Attributes as OA;
 use App\Repository\CustomerRepository;
 use JMS\Serializer\SerializerInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use JMS\Serializer\SerializationContext;
+use Nelmio\ApiDocBundle\Annotation\Model;
 use Symfony\Contracts\Cache\ItemInterface;
-use Symfony\Bundle\SecurityBundle\Security  as SymfonySecurity;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Contracts\Cache\TagAwareCacheInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
+use Symfony\Bundle\SecurityBundle\Security as SymfonySecurity;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Nelmio\ApiDocBundle\Annotation\Model;
-use Nelmio\ApiDocBundle\Annotation\Security;
-use OpenApi\Annotations as OA;
 
 
+#[OA\Tag(name: 'Customers')]
 class CustomerController extends AbstractController
 {
     /**
@@ -145,6 +145,31 @@ class CustomerController extends AbstractController
      * @return JsonResponse
      */
     #[Route('/api/customers', name: 'customer', methods: ['GET'])]
+    #[OA\Response(
+        response: 200,
+        description: 'Returns the rewards of an user',
+        content: new OA\JsonContent(
+            type: 'array',
+            items: new OA\Items(
+                ref: new Model(
+                    type: Customer::class,
+                    groups: ['getCustomers']
+                )
+            )
+        )
+    )]
+    #[OA\Parameter(
+        name: 'page',
+        in: 'query',
+        description: 'The page you want to retrieve',
+        schema: new OA\Schema(type: 'string')
+    )]
+    #[OA\Parameter(
+        name: 'limit',
+        in: 'query',
+        description: 'The number of elements we want to recover',
+        schema: new OA\Schema(type: 'string')
+    )]
     public function getAllCustomers(
         SymfonySecurity $security,
         Request $request,
