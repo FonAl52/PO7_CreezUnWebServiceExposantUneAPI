@@ -34,6 +34,39 @@ class CustomerController extends AbstractController
      * @return JsonResponse
      */
     #[Route('/api/customers', name: "createCustomer", methods: ['POST'])]
+    #[OA\Response(
+        response: 200,
+        description: 'Create a new user',
+        content: new OA\JsonContent(
+            type: 'array',
+            items: new OA\Items(
+                ref: new Model(
+                    type: Customer::class,
+                    groups: ['getCustomers']
+                )
+            )
+        )
+    )]
+    #[OA\RequestBody(
+        description: 'Create a new user',
+        required: true,
+        content: new OA\MediaType(
+            mediaType: 'application/json',
+            schema: new OA\Schema(
+                type: 'object',
+                properties: [
+                    new OA\Property(
+                        type: 'string',
+                    )
+                    ],
+                    example: [
+                        'lastName' => 'Doe',
+                        'firstName' => 'John',
+                        'email' => 'john.doe@example.com'
+                    ]
+            )
+        )
+    )]
     public function createCustomer(
         Request $request,
         SerializerInterface $serializer,
@@ -237,6 +270,39 @@ class CustomerController extends AbstractController
      * @return JsonResponse
      */
     #[Route('api/customers/{id}', name: 'customer_update', methods: ['PUT'])]
+    #[OA\Response(
+        response: 200,
+        description: 'Update a user',
+        content: new OA\JsonContent(
+            type: 'array',
+            items: new OA\Items(
+                ref: new Model(
+                    type: Customer::class,
+                    groups: ['getCustomers']
+                )
+            )
+        )
+    )]
+    #[OA\RequestBody(
+        description: 'Update a user',
+        required: true,
+        content: new OA\MediaType(
+            mediaType: 'application/json',
+            schema: new OA\Schema(
+                type: 'object',
+                properties: [
+                    new OA\Property(
+                        type: 'string',
+                    )
+                    ],
+                    example: [
+                        'lastName' => 'Doe',
+                        'firstName' => 'John',
+                        'email' => 'john.doe@example.com'
+                    ]
+            )
+        )
+    )]
     public function updateCustomer(
         Customer $customer,
         Request $request,
